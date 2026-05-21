@@ -1,0 +1,75 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-app-bg text-app-text antialiased font-sans;
+  }
+  
+  ::selection {
+    background-color: #8b5cf6; /* brand.accent */
+    color: white;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-app-card/40 backdrop-blur-xl border border-white/5 shadow-glass rounded-[32px];
+  }
+  .glass-panel-hover {
+    @apply hover:bg-app-cardHover/60 hover:border-white/10 hover:shadow-glow transition-all duration-300;
+  }
+  
+  .card-premium {
+    @apply glass-panel glass-panel-hover;
+  }
+  
+  .card-navy {
+    @apply bg-app-card border border-brand-accent/20 rounded-[32px] shadow-glow text-white;
+  }
+  
+  /* Pill shaped buttons and inputs */
+  .pill-nav {
+    @apply bg-app-bg/60 backdrop-blur-md rounded-full px-4 py-2 flex items-center gap-2 shadow-soft border border-white/5;
+  }
+  .pill-button {
+    @apply rounded-full font-medium transition-all duration-300 flex items-center justify-center gap-2 active:scale-95;
+  }
+  .pill-button-navy {
+    @apply bg-brand-accent hover:bg-brand-accentHover text-white shadow-[0_0_15px_rgba(139,92,246,0.3)] hover:shadow-[0_0_25px_rgba(139,92,246,0.5)];
+  }
+  .pill-button-light {
+    @apply bg-white/5 hover:bg-white/10 text-app-text shadow-sm border border-white/10;
+  }
+
+  .pill-input {
+    @apply w-full bg-black/20 border border-white/10 rounded-full px-6 py-3 text-app-text focus:ring-2 focus:ring-brand-accent focus:border-transparent outline-none transition-all placeholder-app-subtext backdrop-blur-sm;
+  }
+}
+
+/* Custom Scrollbar for dark theme */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #52525b;
+}
+
+@keyframes scan {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(160px);
+  }
+}
+

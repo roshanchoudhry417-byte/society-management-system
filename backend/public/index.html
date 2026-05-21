@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Society API Tester</title>
+    <!-- Tailwind CSS (CDN for simple testing) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Socket.io -->
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .glass-panel { background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(71, 85, 105, 0.5); }
+        .input-field { background-color: #0f172a; border: 1px solid #475569; color: white; padding: 0.5rem 1rem; border-radius: 0.5rem; width: 100%; }
+        .input-field:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5); }
+        .btn-primary { background-color: #2563eb; color: white; padding: 0.5rem 1rem; border-radius: 0.5rem; transition: background-color 0.2s; cursor: pointer; }
+        .btn-primary:hover { background-color: #1d4ed8; }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+        .event-log { max-height: 200px; overflow-y: auto; background-color: rgba(15, 23, 42, 0.8); padding: 1rem; border-radius: 0.5rem; font-family: monospace; font-size: 0.875rem; }
+    </style>
+</head>
+<body class="p-8">
+
+<div class="max-w-5xl mx-auto space-y-8">
+    <div>
+        <h1 class="text-3xl font-bold text-blue-400">🏢 Society Management Sandbox</h1>
+        <p class="text-gray-400 mt-2">Vanilla JS frontend served directly from the backend <code class="text-xs bg-slate-800 px-2 py-1 rounded">public/index.html</code></p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        
+        <!-- Auth Section -->
+        <div class="glass-panel p-6 rounded-xl shadow-xl">
+            <h2 class="text-xl font-semibold mb-4 border-b border-slate-700 pb-2">1. Authentication</h2>
+            
+            <form id="loginForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Email</label>
+                    <input type="email" id="email" value="admin@society.com" class="input-field" required>
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Password</label>
+                    <input type="password" id="password" value="Admin@123" class="input-field" required>
+                </div>
+                <button type="submit" class="btn-primary w-full">Login</button>
+            </form>
+
+            <div id="authStatus" class="mt-4 p-3 bg-slate-900 rounded text-sm text-gray-400">
+                Not logged in.
+            </div>
+        </div>
+
+        <!-- API Testing Section -->
+        <div class="glass-panel p-6 rounded-xl shadow-xl space-y-6">
+            <h2 class="text-xl font-semibold mb-4 border-b border-slate-700 pb-2">2. Test Endpoints</h2>
+            
+            <!-- Fetch Users -->
+            <div>
+                <button id="fetchUsersBtn" class="btn-primary w-full" disabled>GET /api/v1/users</button>
+            </div>
+
+            <!-- Create Complaint -->
+            <form id="complaintForm" class="space-y-4 border-t border-slate-700 pt-4">
+                <h3 class="text-sm font-semibold text-gray-300">Create Complaint (Resident Only)</h3>
+                <input type="text" id="compTitle" placeholder="Title" class="input-field" required>
+                <textarea id="compDesc" placeholder="Description" class="input-field" required></textarea>
+                <button type="submit" id="createComplaintBtn" class="btn-primary w-full" disabled>POST /api/v1/complaints</button>
+            </form>
+        </div>
+
+    </div>
+
+    <!-- Output & Logs Section -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        
+        <!-- API Response -->
+        <div class="glass-panel p-6 rounded-xl shadow-xl">
+            <h2 class="text-xl font-semibold mb-4 border-b border-slate-700 pb-2">API Response</h2>
+            <pre id="apiOutput" class="event-log text-green-400 min-h-[200px]">Waiting for request...</pre>
+        </div>
+
+        <!-- Socket Logs -->
+        <div class="glass-panel p-6 rounded-xl shadow-xl">
+            <h2 class="text-xl font-semibold mb-4 border-b border-slate-700 pb-2">Socket.io Events</h2>
+            <div id="socketLogs" class="event-log text-blue-300 min-h-[200px]">
+                Waiting for events...
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    let token = null;
+    let currentUser = null;
+    let socket = null;
+
+    // DOM Elements
+    const authStatus = document.getElementById('authStatus');
+    const apiOutput = document.getElementById('apiOutput');
+    const socketLogs = document.getElementById('socketLogs');
+    const loginForm = document.getElementById('loginForm');
+    const fetchUsersBtn = document.getElementById('fetchUsersBtn');
+    const complaintForm = document.getElementById('complaintForm');
+    const createComplaintBtn = document.getElementById('createComplaintBtn');
+
+    // Helper to print logs
+    const logApi = (data, isError = false) => {
+        apiOutput.textContent = JSON.stringify(data, null, 2);
+        apiOutput.className = `event-log min-h-[200px] ${isError ? 'text-red-400' : 'text-green-400'}`;
+    };
+
+    const logSocket = (event, data) => {
+        const time = new Date().toLocaleTimeString();
+        const entry = document.createElement('div');
+        entry.innerHTML = `<span class="text-gray-500">[${time}]</span> <strong class="text-blue-400">${event}</strong><br>${JSON.stringify(data)}`;
+        entry.className = "mb-2 pb-2 border-b border-slate-800 last:border-0";
+        
+        if (socketLogs.innerHTML.includes('Waiting for events...')) {
+            socketLogs.innerHTML = '';
+        }
+        
+        socketLogs.prepend(entry);
+    };
+
+    // Helper to make API requests
+    const fetchApi = async (endpoint, options = {}) => {
+        try {
+            const headers = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+
+            const res = await fetch(`/api/v1${endpoint}`, {
+                ...options,
+                headers: { ...headers, ...options.headers }
+            });
+            const data = await res.json();
+            
+            if (!res.ok) throw data;
+            logApi(data);
+            return data;
+        } catch (err) {
+            logApi(err, true);
+            throw err;
+        }
+    };
+
+    // Initialize Socket.io
+    const initSocket = () => {
+        if (socket) socket.disconnect();
+        
+        socket = io();
+        
+        socket.on('connect', () => {
+            logSocket('System', 'Connected to Socket Server');
+            if (currentUser) {
+                socket.emit('join', {
+                    userId: currentUser._id,
+                    role: currentUser.role,
+                    flatNumber: currentUser.flatNumber
+                });
+            }
+        });
+
+        // Listen for events
+        ['notice:new', 'complaint:new', 'complaint:update', 'visitor:arrival', 'visitor:approved', 'poll:new'].forEach(evt => {
+            socket.on(evt, data => logSocket(evt, data));
+        });
+    };
+
+    // Login Form Submit
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        try {
+            const data = await fetchApi('/auth/login', {
+                method: 'POST',
+                body: JSON.stringify({ email, password })
+            });
+
+            token = data.data.token;
+            currentUser = data.data.user;
+            
+            authStatus.innerHTML = `
+                <div class="text-green-400 font-bold mb-1">✅ Logged In</div>
+                <strong>Name:</strong> ${currentUser.name} <br>
+                <strong>Role:</strong> <span class="capitalize">${currentUser.role}</span>
+            `;
+
+            // Enable Buttons based on role
+            fetchUsersBtn.disabled = currentUser.role !== 'admin';
+            createComplaintBtn.disabled = currentUser.role !== 'resident';
+
+            initSocket();
+        } catch (err) {
+            authStatus.innerHTML = `<span class="text-red-400">Login failed</span>`;
+        }
+    });
+
+    // Fetch Users (Admin Only)
+    fetchUsersBtn.addEventListener('click', () => {
+        fetchApi('/users');
+    });
+
+    // Create Complaint (Resident Only)
+    complaintForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const title = document.getElementById('compTitle').value;
+        const description = document.getElementById('compDesc').value;
+
+        await fetchApi('/complaints', {
+            method: 'POST',
+            body: JSON.stringify({ title, description, priority: 'medium', category: 'maintenance' })
+        });
+    });
+
+    // Initial socket connection (unauthenticated)
+    initSocket();
+</script>
+
+</body>
+</html>

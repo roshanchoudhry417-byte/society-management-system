@@ -1,0 +1,14 @@
+{
+  "name": "society-apartment-management-system",
+  "version": "1.0.0",
+  "description": "Root package for Society/Apartment Management System",
+  "scripts": {
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "dev": "npx -y concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "build:frontend": "npm run build --prefix frontend",
+    "build": "npm run build:frontend"
+  },
+  "author": "",
+  "license": "ISC"
+}
