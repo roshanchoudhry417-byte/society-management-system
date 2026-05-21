@@ -13,7 +13,7 @@ const app = express();
 // ─── Security Middleware ──────────────────────────────
 app.use(helmet());
 app.use(cors({
-  origin: config.corsOrigin,
+  origin: true, // Allow any origin (Vercel domains, localhost)
   credentials: true,
 }));
 
@@ -36,7 +36,9 @@ if (config.nodeEnv !== 'test') {
   });
 
   app.use('/api/', generalLimiter);
+  app.use('/_backend/api/', generalLimiter);
   app.use('/api/v1/auth', authLimiter);
+  app.use('/_backend/api/v1/auth', authLimiter);
 }
 
 // ─── Body Parsing ─────────────────────────────────────
@@ -54,6 +56,7 @@ app.use(express.static(path.join(__dirname, '../public'))); // Serve frontend fr
 
 // ─── API Routes ───────────────────────────────────────
 app.use('/api/v1', v1Routes);
+app.use('/_backend/api/v1', v1Routes); // For Vercel Web Services routing
 
 // ─── 404 Handler ──────────────────────────────────────
 app.use((req, res) => {
