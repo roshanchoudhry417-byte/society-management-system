@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: '/api/v1',
+  baseURL: import.meta.env.PROD ? '/_backend/api/v1' : '/api/v1',
 });
 
 // Add interceptor for attaching JWT token
