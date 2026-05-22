@@ -1,6 +1,6 @@
 const dns = require('dns');
-// Override Node.js DNS resolution to use Google DNS, fixing MongoDB Atlas SRV blocking
-dns.setServers(['8.8.8.8', '8.8.4.4']);
+// Override Node.js DNS resolution to use Google DNS, fixing MongoDB Atlas SRV blocking locally
+// dns.setServers(['8.8.8.8', '8.8.4.4']); // REMOVED for Vercel deployment
 
 const http = require('http');
 const app = require('./src/app');
